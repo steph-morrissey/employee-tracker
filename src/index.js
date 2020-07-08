@@ -13,6 +13,9 @@ const config = {
 
 const connection = mysql.createConnection(config);
 
+const choices = (rows, property, id) => {
+  console.log("rows", rows);
+};
 const init = async () => {
   // Questions for the employee tracker
   const generateMenu = [
@@ -62,7 +65,7 @@ const init = async () => {
           short: "Remove Employee",
         },
         {
-          name: "Update employee roll",
+          name: "Update employee role",
           value: "updateRole",
           short: "Update Role",
         },
@@ -78,35 +81,111 @@ const init = async () => {
   // Prompt the user with options available
   const { selection } = await inquirer.prompt(generateMenu);
 
+  // View all employees
   if (selection === "viewAll") {
-    console.log("hello");
+    const query = `
+    SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name as department, CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+    FROM employee LEFT JOIN role on employee.role_id = role.id
+    LEFT JOIN department on role.department_id = department.id
+    LEFT JOIN employee manager on manager.id = employee.manager_id;
+    `;
+
+    const onQuery = (err, rows) => {
+      if (err) throw err;
+      console.table(rows);
+      init();
+    };
+
+    connection.query(query, onQuery);
   }
+
+  // View all employees by department
   if (selection === "employeesByDept") {
-    console.log("employeesByDept");
+    const query = "SELECT * FROM department";
+
+    const onQuery = async (err, rows) => {
+      if (err) throw err;
+
+      const choices = rows.map((row) => {
+        return {
+          name: row.name,
+          value: row.id,
+          short: row.name,
+        };
+      });
+
+      const questions = [
+        {
+          message: "Select a department:",
+          name: "departmentId",
+          type: "list",
+          choices,
+        },
+      ];
+
+      const { departmentId } = await inquirer.prompt(questions);
+
+      const queryEmployeesByDepartment = `
+      SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name as department
+      FROM employee LEFT JOIN role on employee.role_id = role.id
+      LEFT JOIN department on role.department_id = department.id
+      WHERE department.id = ${departmentId};
+      `;
+
+      const onEmployeeQuery = (err, rows) => {
+        if (err) throw err;
+        console.table(rows);
+        init();
+      };
+
+      connection.query(queryEmployeesByDepartment, onEmployeeQuery);
+    };
+    connection.query(query, onQuery);
   }
+
+  // View all employees by role
   if (selection === "employeeByRoles") {
-    console.log("employeeByRoles");
-  }
-  if (selection === "employeesByManager") {
-    console.log("employeesByManager");
-  }
-  if (selection === "addEmployee") {
-    console.log("addEmployee");
-  }
-  if (selection === "addDepartment") {
-    console.log("addDepartment");
-  }
-  if (selection === "addRole") {
-    console.log("addRole");
-  }
-  if (selection === "removeEmployee") {
-    console.log("removeEmployee");
-  }
-  if (selection === "updateRole") {
-    console.log("updateRole");
-  }
-  if (selection === "updateManager") {
-    console.log("updateManager");
+    const query = "SELECT * FROM role";
+
+    const onQuery = async (err, roles) => {
+      if (err) throw err;
+
+      const choices = roles.map((role) => {
+        return {
+          name: role.title,
+          value: role.id,
+          short: role.title,
+        };
+      });
+
+      const questions = [
+        {
+          message: "Select a role:",
+          name: "roleId",
+          type: "list",
+          choices,
+        },
+      ];
+
+      const { roleId } = await inquirer.prompt(questions);
+
+      const queryEmployeesByRole = `
+      SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name as department
+      FROM employee LEFT JOIN role on employee.role_id = role.id
+      LEFT JOIN department on role.department_id = department.id
+      WHERE role.id = ${roleId}
+      `;
+
+      const onEmployeeQuery = (err, employees) => {
+        if (err) throw err;
+        console.table(employees);
+        init();
+      };
+
+      connection.query(queryEmployeesByRole, onEmployeeQuery);
+    };
+
+    connection.query(query, onQuery);
   }
 };
 
