@@ -13,9 +13,6 @@ const config = {
 
 const connection = mysql.createConnection(config);
 
-const choices = (rows, property, id) => {
-  console.log("rows", rows);
-};
 const init = async () => {
   // Questions for the employee tracker
   const generateMenu = [
@@ -192,7 +189,7 @@ const init = async () => {
   if (selection === "employeesByManager") {
     const queryManagers = `
     SELECT employee.id, employee.first_name, employee.last_name FROM employee
-    INNER JOIN (SELECT DISTINCT(manager_id) FROM company_db.employee WHERE manager_id IS NOT NULL) as manager
+    INNER JOIN (SELECT DISTINCT(manager_id) FROM employees_db.employee WHERE manager_id IS NOT NULL) as manager
     on employee.id = manager.manager_id
     `;
 
@@ -316,7 +313,7 @@ const init = async () => {
     const queryRoles = "SELECT * FROM role";
     const queryManagers = `
     SELECT employee.id, employee.first_name, employee.last_name FROM employee
-    INNER JOIN (SELECT DISTINCT(manager_id) FROM company_db.employee WHERE manager_id IS NOT NULL) as manager
+    INNER JOIN (SELECT DISTINCT(manager_id) FROM employees_db.employee WHERE manager_id IS NOT NULL) as manager
     on employee.id = manager.manager_id
     `;
 
@@ -391,6 +388,138 @@ const init = async () => {
     };
 
     connection.query(`${queryRoles}; ${queryManagers}`, onQuery);
+  }
+
+  // Remove employee
+  if (selection === "removeEmployee") {
+    const allEmployeesQuery = "SELECT * FROM employee";
+
+    const onAllEmployeesQuery = async (err, employees) => {
+      if (err) throw err;
+
+      const choices = employees.map((employee) => {
+        return {
+          name: `${employee.first_name} ${employee.last_name}`,
+          value: employee.id,
+          short: `${employee.first_name} ${employee.last_name}`,
+        };
+      });
+
+      const questions = [
+        {
+          message: "Select an employee:",
+          name: "employeeId",
+          type: "list",
+          choices,
+        },
+      ];
+
+      const { employeeId } = await inquirer.prompt(questions);
+
+      const deleteEmployeeQuery = `DELETE FROM employee WHERE id=${employeeId}`;
+
+      const onDeleteEmployeeQuery = (err) => {
+        if (err) throw err;
+        console.log("Deleted employee successfully from DB");
+        init();
+      };
+
+      connection.query(deleteEmployeeQuery, onDeleteEmployeeQuery);
+    };
+
+    connection.query(allEmployeesQuery, onAllEmployeesQuery);
+  }
+
+  // Update a role
+  if (selection === "updateRole") {
+    const allRolesQuery = "SELECT * FROM role";
+
+    const onAllRolesQuery = async (err, roles) => {
+      if (err) throw err;
+
+      const choices = roles.map((role) => {
+        return {
+          name: role.title,
+          value: role.id,
+          short: role.title,
+        };
+      });
+
+      const questions = [
+        {
+          message: "Select a role you wish to update:",
+          name: "roleId",
+          type: "list",
+          choices,
+        },
+        {
+          message: "Enter updated role name:",
+          name: "updateRoleId",
+          type: "input",
+        },
+      ];
+
+      const { roleId, updateRoleId } = await inquirer.prompt(questions);
+      console.log(roleId, updateRoleId);
+      const updateRoleQuery = `UPDATE role SET role.title = "${updateRoleId}" WHERE role.id = ${roleId}`;
+
+      const onUpdateRoleQuery = (err) => {
+        if (err) throw err;
+        console.log("Updated role successfully in DB");
+        init();
+      };
+      connection.query(updateRoleQuery, onUpdateRoleQuery);
+    };
+    connection.query(allRolesQuery, onAllRolesQuery);
+  }
+
+  // Update an employees manager
+  if (selection === "updateManager") {
+    const allEmployeesQuery = "SELECT * FROM employee";
+
+    const onAllEmployeesQuery = async (err, employees) => {
+      if (err) throw err;
+
+      const choices = employees.map((employee) => {
+        return {
+          name: `${employee.first_name} ${employee.last_name}`,
+          value: employee.id,
+          short: `${employee.first_name} ${employee.last_name}`,
+        };
+      });
+
+      const questions = [
+        {
+          message: "Select employee to alter manager:",
+          name: "employeeId",
+          type: "list",
+          choices,
+        },
+        {
+          message: "Select chosen employees manager:",
+          name: "updateManagerId",
+          type: "list",
+          choices,
+        },
+      ];
+
+      const { employeeId, updateManagerId } = await inquirer.prompt(questions);
+
+      const updateManagerQuery = `UPDATE employee SET employee.manager_id = "${updateManagerId}" WHERE employee.id = ${employeeId}`;
+      console.log(updateManagerQuery);
+      const onUpdateManagerQuery = (err) => {
+        if (err) throw err;
+        console.log("Updated manager successfully in DB");
+        init();
+      };
+      connection.query(updateManagerQuery, onUpdateManagerQuery);
+    };
+    connection.query(allEmployeesQuery, onAllEmployeesQuery);
+  }
+
+  // Exit the menu
+  if (selection === "end") {
+    process.exit();
   }
 };
 
