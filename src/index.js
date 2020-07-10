@@ -313,29 +313,16 @@ const init = async () => {
   // Add an employee
   if (selection === "addEmployee") {
     const queryRoles = "SELECT * FROM role";
-    const queryManagers = `
-    SELECT employee.id, employee.first_name, employee.last_name FROM employee
-    INNER JOIN (SELECT DISTINCT(manager_id) FROM employees_db.employee WHERE manager_id IS NOT NULL) as manager
-    on employee.id = manager.manager_id
-    `;
 
     const onQuery = async (err, rows) => {
       if (err) throw err;
-      const [roles, managers] = rows;
+      const roles = rows;
 
-      const roleChoices = roles.map((role) => {
+      const choices = roles.map((role) => {
         return {
           name: role.title,
           value: role.id,
           short: role.title,
-        };
-      });
-
-      const managerChoices = managers.map((manager) => {
-        return {
-          name: `${manager.first_name} ${manager.last_name}`,
-          value: manager.id,
-          short: `${manager.first_name} ${manager.last_name}`,
         };
       });
 
@@ -354,31 +341,13 @@ const init = async () => {
           message: "Select a role:",
           name: "roleId",
           type: "list",
-          choices: roleChoices,
-        },
-        {
-          message: "Do you want to select a manager?",
-          name: "manager",
-          type: "confirm",
-        },
-        {
-          message: "Select manager:",
-          name: "managerId",
-          type: "list",
-          choices: managerChoices,
-          when: (answers) => {
-            return answers.manager;
-          },
+          choices: choices,
         },
       ];
 
       const answers = await inquirer.prompt(questions);
 
-      const addEmployeeQuery = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ("${
-        answers.firstName
-      }", "${answers.lastName}", ${answers.roleId}, ${
-        answers.managerId || null
-      })`;
+      const addEmployeeQuery = `INSERT INTO employee (first_name, last_name, role_id) VALUES ("${answers.firstName}", "${answers.lastName}", ${answers.roleId})`;
 
       const onEmployeeAddQuery = (err) => {
         if (err) throw err;
@@ -389,7 +358,7 @@ const init = async () => {
       connection.query(addEmployeeQuery, onEmployeeAddQuery);
     };
 
-    connection.query(`${queryRoles}; ${queryManagers}`, onQuery);
+    connection.query(queryRoles, onQuery);
   }
 
   // Remove employee
