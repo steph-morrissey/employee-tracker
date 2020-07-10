@@ -11,8 +11,10 @@ const config = {
   database: "employees_db",
 };
 
+// Creating connection using config options
 const connection = mysql.createConnection(config);
 
+// Function that initialises menu options
 const init = async () => {
   // Questions for the employee tracker
   const generateMenu = [
@@ -523,10 +525,12 @@ const init = async () => {
   }
 };
 
+// Callback that executed init() once connect is successful
 const onConnect = () => {
   console.log("connection successful");
 
   init();
 };
 
+// Connecting to db
 connection.connect(onConnect);
